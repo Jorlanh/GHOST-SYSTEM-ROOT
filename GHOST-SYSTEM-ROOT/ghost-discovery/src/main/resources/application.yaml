@@ -1,0 +1,15 @@
+server:
+  port: 8761 # Porta padrão mundial do Eureka
+
+spring:
+  application:
+    name: ghost-discovery
+
+eureka:
+  client:
+    # O servidor não precisa se registrar nele mesmo
+    register-with-eureka: false
+    fetch-registry: false
+  server:
+    # Desativa preservação de self-preservation para dev (evita falsos alertas)
+    enable-self-preservation: false

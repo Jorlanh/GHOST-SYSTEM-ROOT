@@ -1,0 +1,18 @@
+server:
+  port: 8082 # Roda na 8082
+
+spring:
+  application:
+    name: ghost-integrations
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+
+# Configurações para as APIs Externas (Placeholder para o futuro)
+integration:
+  weather:
+    api-key: ${WEATHER_API_KEY:chave_teste}
+  google-maps:
+    api-key: ${MAPS_API_KEY:chave_teste}

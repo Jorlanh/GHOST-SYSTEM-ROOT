@@ -1,0 +1,27 @@
+server:
+  port: 8080 # A porta que o Frontend vai chamar
+
+spring:
+  application:
+    name: ghost-gateway
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true # Permite encontrar microsserviços automaticamente
+      # As rotas de tráfego (O Mapa do Porteiro)
+      routes:
+        - id: core-route
+          uri: lb://ghost-core # "lb" = Load Balancer (usa o nome do serviço)
+          predicates:
+            - Path=/api/core/**
+            
+        - id: integrations-route
+          uri: lb://ghost-integrations
+          predicates:
+            - Path=/api/integrations/**
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
