@@ -5,41 +5,61 @@ spring:
   application:
     name: ghost-core
 
-  # --- CONFIGURAÇÃO DO BANCO DE DADOS ---
+  # --- BANCO DE DADOS (Postgres) ---
   datasource:
     url: jdbc:postgresql://localhost:5432/ghost_db
     username: postgres
-    password: admin # Tem que ser igual ao do docker-compose.yml
+    password: admin
     driver-class-name: org.postgresql.Driver
+
+  # --- MIGRAÇÃO DE DADOS (Flyway) ---
+  # Essencial pois adicionamos a dependência no pom.xml
+  flyway:
+    enabled: true
+    baseline-on-migrate: true # Cria a tabela de histórico se não existir
+
+  # --- CACHE (Redis) ---
+  # Essencial para o ApiConfigService não bater no banco toda hora
+  data:
+    redis:
+      host: localhost
+      port: 6379
 
   jpa:
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: update # Cuidado: Em produção use 'validate', para dev 'update' é ok
+    show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
-  # --- CONFIGURAÇÃO DE IA (CORREÇÃO DO ERRO) ---
+  # --- CONFIGURAÇÃO DE IA (Versão M5) ---
   ai:
-    # Configuração do Gemini (Google)
+    # 1. Google Gemini (Starter google-ai-gemini)
+    # A hierarquia mudou: agora é google.ai.gemini
     google:
-      genai:
-        api-key: ${GEMINI_API_KEY:chave_temporaria_gemini}
-        chat:
-          options:
-            model: gemini-1.5-flash
-    
-    # Configuração da OpenAI (Base para o Groq)
+      ai:
+        gemini:
+          api-key: ${GEMINI_API_KEY:chave_dummy_para_iniciar_o_bean}
+          chat:
+            options:
+              model: gemini-1.5-flash
+              temperature: 0.7
+
+    # 2. OpenAI / Groq (Fallback)
+    # O Spring exige uma chave aqui para iniciar o Bean, mesmo que usemos a do banco depois.
     openai:
-      # O Spring EXIGE uma chave aqui para iniciar. Usamos uma dummy.
-      api-key: sk-proj-dummy-key-for-startup 
-      base-url: https://api.groq.com/openai/v1 # Já aponta para o Groq
+      api-key: sk-dummy-key-startup-ignore
+      base-url: https://api.groq.com/openai/v1
       chat:
         options:
           model: llama3-70b-8192
+          temperature: 0.6
 
+# --- DISCOVERY (Eureka) ---
 eureka:
   client:
     service-url:
       defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true

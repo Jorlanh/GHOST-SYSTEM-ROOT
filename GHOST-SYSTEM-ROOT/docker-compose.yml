@@ -2,11 +2,12 @@ version: '3.8'
 
 services:
   # ----------------------------------------------------------------
-  # 1. BANCO DE DADOS (Cérebro da Persistência)
-  # Armazena usuários, logs do God Mode e configurações.
+  # 1. BANCO DE DADOS (Cérebro da Persistência com IA)
+  # Usando pgvector para permitir que o GHOST armazene e recupere 
+  # memórias baseadas em contexto e não apenas palavras-chave.
   # ----------------------------------------------------------------
   postgres:
-    image: postgres:15-alpine
+    image: ankane/pgvector:latest
     container_name: ghost-postgres
     ports:
       - "5432:5432"
@@ -22,37 +23,39 @@ services:
 
   # ----------------------------------------------------------------
   # 2. MESSAGE BROKER (RabbitMQ)
-  # Permite que o Core mande mensagens para o Integrations sem travar.
-  # Essencial para arquitetura assíncrona de TCC.
+  # Orquestração assíncrona: o Core envia tarefas para os "Braços" 
+  # (integrations) sem travar a resposta de voz.
   # ----------------------------------------------------------------
   rabbitmq:
     image: rabbitmq:3-management-alpine
     container_name: ghost-rabbitmq
     ports:
-      - "5672:5672"   # Porta de comunicação da App
-      - "15672:15672" # Painel Visual (Acesse localhost:15672)
+      - "5672:5672"   # Porta de comunicação AMQP
+      - "15672:15672" # Interface Web (Login: guest/guest)
     environment:
       - RABBITMQ_DEFAULT_USER=guest
       - RABBITMQ_DEFAULT_PASS=guest
     networks:
       - ghost-network
+    restart: always
 
   # ----------------------------------------------------------------
   # 3. DISTRIBUTED TRACING (Zipkin)
-  # O "Raio-X" do sistema. Mostra quanto tempo cada requisição demorou.
-  # A banca adora ver gráficos de latência aqui.
+  # Monitoramento de latência. Vital para o TCC demonstrar a performance
+  # da arquitetura de microsserviços.
   # ----------------------------------------------------------------
   zipkin:
     image: openzipkin/zipkin
     container_name: ghost-zipkin
     ports:
-      - "9411:9411" # Acesse localhost:9411 para ver os traces
+      - "9411:9411"
     networks:
       - ghost-network
+    restart: always
 
   # ----------------------------------------------------------------
-  # 4. ADMINISTRAÇÃO DE BANCO (PgAdmin) - Opcional
-  # Interface visual para ver as tabelas do banco sem usar comando SQL.
+  # 4. ADMINISTRAÇÃO DE BANCO (PgAdmin)
+  # Interface visual para gerenciar a tabela de memórias e logs.
   # ----------------------------------------------------------------
   pgadmin:
     image: dpage/pgadmin4
@@ -60,14 +63,16 @@ services:
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@ghost.com
       PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
     ports:
       - "5050:80"
     depends_on:
       - postgres
     networks:
       - ghost-network
+    restart: always
 
-# Rede privada para os containers conversarem entre si
+# Rede privada para isolamento tático dos serviços
 networks:
   ghost-network:
     driver: bridge
