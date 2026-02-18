@@ -24,6 +24,10 @@ public class GhostMemory {
     @Column(name = "firebase_uid", nullable = false)
     private String firebaseUid;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "firebase_uid", referencedColumnName = "firebase_uid", insertable = false, updatable = false)
+    private UsersContext user;
+
     @Column(columnDefinition = "TEXT", nullable = false)
     private String content;
 
@@ -32,7 +36,7 @@ public class GhostMemory {
      * Mapeamento nativo via hibernate-vector + pgvector
      */
     @JdbcTypeCode(SqlTypes.VECTOR)
-    @Array(length = 1536)                           // Obrigatório para bind correto no JDBC
+    @Array(length = 1536)
     @Column(name = "embedding", columnDefinition = "vector(1536)", nullable = true)
     private float[] embedding;
 
