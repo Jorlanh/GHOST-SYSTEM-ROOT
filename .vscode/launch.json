@@ -1,0 +1,41 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "GhostCoreApplication",
+            "request": "launch",
+            "mainClass": "com.ghost.core.GhostCoreApplication",
+            "projectName": "ghost-core"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-GhostDiscoveryApplication<ghost-discovery>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.ghost.ghost_discovery.GhostDiscoveryApplication",
+            "projectName": "ghost-discovery",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-GhostGatewayApplication<ghost-gateway>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.ghost.ghost_gateway.GhostGatewayApplication",
+            "projectName": "ghost-gateway",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-GhostIntegrationsApplication<ghost-integrations>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.ghost.ghost_integrations.GhostIntegrationsApplication",
+            "projectName": "ghost-integrations",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}

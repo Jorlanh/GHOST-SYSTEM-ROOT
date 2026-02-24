@@ -1,27 +1,88 @@
 server:
-  port: 8080 # A porta que o Frontend vai chamar
+  port: 8080 # Porta central de entrada (Frontend -> Gateway)
 
 spring:
   application:
     name: ghost-gateway
+    
+  # ==========================================
+  # CONFIGURAÇÃO DE SEGURANÇA (FIREBASE JWT)
+  # ==========================================
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com
+
+  # ==========================================
+  # NÚCLEO DE ROTEAMENTO (WEBFLUX DE ELITE)
+  # ==========================================
   cloud:
     gateway:
       discovery:
         locator:
-          enabled: true # Permite encontrar microsserviços automaticamente
-      # As rotas de tráfego (O Mapa do Porteiro)
+          enabled: true 
+          lower-case-service-id: true
+          
+      # AQUI ESTÁ A PONTE NEURAL OFICIAL:
       routes:
         - id: core-route
-          uri: lb://ghost-core # "lb" = Load Balancer (usa o nome do serviço)
+          uri: lb://GHOST-CORE 
           predicates:
-            - Path=/api/core/**
+            - Path=/api/v1/ghost/**
             
         - id: integrations-route
-          uri: lb://ghost-integrations
+          uri: lb://GHOST-INTEGRATIONS
           predicates:
             - Path=/api/integrations/**
 
+  # ==========================================
+  # CONEXÃO COM O REDIS (DOCKER)
+  # ==========================================
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+# ==========================================
+# RASTREAMENTO E TELEMETRIA (ZIPKIN)
+# ==========================================
+management:
+  tracing:
+    sampling:
+      probability: 1.0 # Rastreia 100% dos comandos
+  zipkin:
+    tracing:
+      endpoint: http://localhost:9411/api/v2/spans
+
+# ==========================================
+# DISJUNTOR DE SEGURANÇA (RESILIENCE4J)
+# ==========================================
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10000
+        permittedNumberOfCallsInHalfOpenState: 3
+  timelimiter:
+    configs:
+      default:
+        timeoutDuration: 5s
+
+# ==========================================
+# CONFIGURAÇÃO DO CLIENTE EUREKA
+# ==========================================
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+    registry-fetch-interval-seconds: 5
+    register-with-eureka: true
+    fetch-registry: true
+    enabled: true
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${random.value}
+    hostname: localhost

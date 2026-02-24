@@ -1,13 +1,9 @@
 version: '3.8'
 
 services:
-  # ----------------------------------------------------------------
   # 1. BANCO DE DADOS (Cérebro da Persistência com IA)
-  # Usando pgvector para permitir que o GHOST armazene e recupere 
-  # memórias baseadas em contexto e não apenas palavras-chave.
-  # ----------------------------------------------------------------
   postgres:
-    image: ankane/pgvector:latest
+    image: pgvector/pgvector:pg17
     container_name: ghost-postgres
     ports:
       - "5432:5432"
@@ -21,17 +17,13 @@ services:
       - ghost-network
     restart: always
 
-  # ----------------------------------------------------------------
   # 2. MESSAGE BROKER (RabbitMQ)
-  # Orquestração assíncrona: o Core envia tarefas para os "Braços" 
-  # (integrations) sem travar a resposta de voz.
-  # ----------------------------------------------------------------
   rabbitmq:
     image: rabbitmq:3-management-alpine
     container_name: ghost-rabbitmq
     ports:
-      - "5672:5672"   # Porta de comunicação AMQP
-      - "15672:15672" # Interface Web (Login: guest/guest)
+      - "5672:5672"
+      - "15672:15672"
     environment:
       - RABBITMQ_DEFAULT_USER=guest
       - RABBITMQ_DEFAULT_PASS=guest
@@ -39,11 +31,7 @@ services:
       - ghost-network
     restart: always
 
-  # ----------------------------------------------------------------
   # 3. DISTRIBUTED TRACING (Zipkin)
-  # Monitoramento de latência. Vital para o TCC demonstrar a performance
-  # da arquitetura de microsserviços.
-  # ----------------------------------------------------------------
   zipkin:
     image: openzipkin/zipkin
     container_name: ghost-zipkin
@@ -53,10 +41,7 @@ services:
       - ghost-network
     restart: always
 
-  # ----------------------------------------------------------------
   # 4. ADMINISTRAÇÃO DE BANCO (PgAdmin)
-  # Interface visual para gerenciar a tabela de memórias e logs.
-  # ----------------------------------------------------------------
   pgadmin:
     image: dpage/pgadmin4
     container_name: ghost-pgadmin
@@ -72,7 +57,41 @@ services:
       - ghost-network
     restart: always
 
-# Rede privada para isolamento tático dos serviços
+  # 5. CACHE E SESSION (Redis)
+  redis:
+    image: redis:alpine
+    container_name: ghost-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - ghost-network
+    restart: always
+
+  # 6. DASHBOARD REDIS (Redis Insight)
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: ghost-redisinsight
+    ports:
+      - "5540:5540"
+    networks:
+      - ghost-network
+    restart: always
+
+  # ----------------------------------------------------------------
+  # 7. MOTOR VOCAL (Kokoro TTS)
+  # Microsserviço de síntese de voz de alta fidelidade para o GHOST.
+  # Processamento local via ONNX em Python 3.12.
+  # ----------------------------------------------------------------
+  ghost-voice:
+    build: ./ghost-voice
+    container_name: ghost-voice
+    ports:
+      - "5001:5000" # Mudamos para 5001 no Host para desviar do Windows
+    networks:
+      - ghost-network
+    # REMOVIDO: volumes: - ./ghost-voice:/app (Para não quebrar os binários do Linux compilados no build)
+    restart: always
+
 networks:
   ghost-network:
     driver: bridge

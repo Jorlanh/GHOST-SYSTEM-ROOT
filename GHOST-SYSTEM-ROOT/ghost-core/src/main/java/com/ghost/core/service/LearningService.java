@@ -1,71 +1,81 @@
 package com.ghost.core.service;
 
-import lombok.RequiredArgsConstructor;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
+
 @Service
 @Slf4j
-@RequiredArgsConstructor
 public class LearningService {
 
     private final MemoryService memoryService;
-    private final ChatModel chatModel; // Pode ser Gemini ou Groq
+    private final ChatModel geminiChatModel;
+    private final ChatModel groqChatModel;
 
-    @Async // Roda em background para não atrasar a resposta ao usuário
+    // CONSTRUTOR MANUAL: Obrigatório para @Qualifier funcionar corretamente sem ambiguidades
+    public LearningService(
+            MemoryService memoryService,
+            @Qualifier("googleGenAiChatModel") ChatModel geminiChatModel, // <--- Nome correto do bean
+            @Qualifier("groqChatModel") ChatModel groqChatModel) {
+        
+        this.memoryService = memoryService;
+        this.geminiChatModel = geminiChatModel;
+        this.groqChatModel = groqChatModel;
+    }
+
+    @Async
     public void analyzeAndLearn(String userMessage, String aiResponse, String firebaseUid) {
-        log.info("Protocolo de Auto-Aprendizado iniciado para usuário {}", firebaseUid);
+        log.info("Iniciando auto-aprendizado para usuário: {}", firebaseUid);
 
         String evaluationPrompt = """
             Você é o módulo de memória do GHOST.
-            Analise a conversa abaixo e decida se há algo relevante para salvar permanentemente.
-
+            Analise a conversa e responda SOMENTE com JSON.
+            
             CONVERSA:
             Usuário: %s
             GHOST: %s
 
-            REGRAS:
-            - Salve APENAS fatos novos, preferências, detalhes de projetos, decisões ou instruções.
-            - Ignore saudações, piadas leves, conversas triviais.
-            - Se salvar, atribua importância de 1 a 10.
-            - Categoria: personal, work, project, preference, command, other.
-
-            Responda SOMENTE com JSON válido:
-            {"shouldSave": true, "content": "resumo curto e preciso do fato", "category": "categoria", "importance": 8}
-            ou
+            JSON ESPERADO:
+            {"shouldSave": true, "content": "resumo do fato", "category": "personal", "importance": 8}
+            OU
             {"shouldSave": false}
             """.formatted(userMessage, aiResponse);
 
         try {
-            String jsonDecision = chatModel.call(new Prompt(evaluationPrompt)).getResult().getOutput().getText();
+            // Groq é rápido e barato -> ideal para essa tarefa de background
+            String jsonDecision = callModelWithFallback(groqChatModel, geminiChatModel, evaluationPrompt, firebaseUid);
 
-            // Parse simples (em produção use Jackson/ObjectMapper)
-            if (jsonDecision.contains("\"shouldSave\": true")) {
-                // Extrai os campos (exemplo básico – melhore com JSON parser)
-                String content = extractJsonField(jsonDecision, "content");
-                String category = extractJsonField(jsonDecision, "category");
-                int importance = Integer.parseInt(extractJsonField(jsonDecision, "importance"));
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode node = mapper.readTree(jsonDecision);
 
-                memoryService.saveMemory(content, firebaseUid, category, importance);
-                log.info("Auto-aprendizado: memória salva (importância {})", importance);
-            } else {
-                log.debug("Nada relevante para salvar nesta interação.");
+            if (node.path("shouldSave").asBoolean(false)) {
+                String content = node.path("content").asText();
+                String category = node.path("category").asText("other");
+                int importance = node.path("importance").asInt(5);
+
+                if (content != null && !content.isEmpty()) {
+                    memoryService.saveMemory(content, firebaseUid, category, importance);
+                    log.info("Memória salva: {}", content);
+                }
             }
         } catch (Exception e) {
-            log.error("Erro no auto-aprendizado: {}", e.getMessage(), e);
+            log.error("Erro no auto-aprendizado (uid {}): {}", firebaseUid, e.getMessage());
         }
     }
 
-    // Helper simples (melhore com Jackson em produção)
-    private String extractJsonField(String json, String field) {
-        String key = "\"" + field + "\":";
-        int start = json.indexOf(key) + key.length();
-        int end = json.indexOf(",", start);
-        if (end == -1) end = json.indexOf("}", start);
-        String value = json.substring(start, end).trim();
-        return value.replace("\"", "").replace("}", "");
+    private String callModelWithFallback(ChatModel primary, ChatModel fallback, String promptText, String uid) {
+        try {
+            return primary.call(new Prompt(promptText)).getResult().getOutput().getText();
+        } catch (Exception e) {
+            log.warn("Modelo primário falhou no learning, tentando fallback...");
+            return fallback.call(new Prompt(promptText)).getResult().getOutput().getText();
+        }
     }
 }
