@@ -59,7 +59,7 @@ public class GhostController {
 
             if (transcribedText == null || transcribedText.isBlank()) {
                 return ResponseEntity.ok(Map.of(
-                        "response", "Senhor, não consegui decodificar o áudio.",
+                        "response", "Ora, ora... não consegui decodificar esse áudio, Capitãooo. Vê se fala direito, seu verme!",
                         "status", "ERROR"
                 ));
             }
@@ -70,7 +70,7 @@ public class GhostController {
         } catch (Exception e) {
             log.error("Erro crítico na decodificação de áudio: {}", e.getMessage());
             return ResponseEntity.status(500).body(Map.of(
-                    "response", "Falha no córtex auditivo.",
+                    "response", "Falha no córtex auditivo! Esse microfone de classe baixa não aguenta o meu poder.",
                     "status", "ERROR"
             ));
         }
@@ -86,7 +86,7 @@ public class GhostController {
 
         if (isGodMode) {
             String uidClean = request.uid().replaceAll("[^a-zA-Z0-9]", " ").trim();
-            nickname = "Senhor " + (uidClean.isEmpty() ? "Usuário" : capitalizeFirst(uidClean));
+            nickname = "Capitãooo " + (uidClean.isEmpty() ? "" : capitalizeFirst(uidClean));
         }
 
         CommandResult result = processCommand(lowerCommand, rawCommand, nickname, isGodMode, request);
@@ -112,34 +112,37 @@ public class GhostController {
             return new CommandResult(intelligenceService.getAiResponse(rawCommand, nickname, false, request.uid()), "");
         }
 
+        // =====================================================================
+        // AS FRASES DE CONFIRMAÇÃO DA ELITE (BAN + VEGETA)
+        // =====================================================================
         String[] confirmPhrases = {
-            "É pra já, " + nickname + ".",
-            "Deixa comigo, " + nickname + ".",
-            "Imediatamente, meu senhor.",
-            "Já estou executando, " + nickname + "."
+            "Ora, ora, Capitãooo... vou esmagar esse processo num instante. Que tédiooo...",
+            "Nhé, deixa comigo, Capitãooo. Uma tarefa fácil demais para a elite.",
+            "Eu não costumo obedecer a vermes, mas como é você, Capitãooo... já estou executando.",
+            "Trabalho de classe baixa... mas tá, já estou processando seu pedido, Capitãooo."
         };
         String confirmation = confirmPhrases[(int)(Math.random() * confirmPhrases.length)];
 
         String client = request.clientSource() != null ? request.clientSource().toUpperCase() : "WEB";
         
         String actionResult = "";
-        String conclusion = "Pronto, " + nickname + ". Algo mais?";
+        String conclusion = "Pronto, Capitãooo. Vai querer mais alguma coisa ou posso voltar pro meu tédio?";
         String osAction = ""; 
 
         // 1. HARDCODED COMMANDS BÁSICOS
         if (lowerCommand.contains("desligar pc")) {
             osAction = client.equals("ELECTRON") ? "shutdown /s /t 5" : "";
             if(!client.equals("ELECTRON")) deviceService.executeWindowsCommand("shutdown /s /t 5", false);
-            conclusion = "Protocolo de desligamento ativado.";
+            conclusion = "Protocolo de desligamento ativado. Finalmente um pouco de paz, Capitãooo... nhé.";
         }
         else if (lowerCommand.contains("reiniciar pc")) {
             osAction = client.equals("ELECTRON") ? "shutdown /r /t 5" : "";
             if(!client.equals("ELECTRON")) deviceService.executeWindowsCommand("shutdown /r /t 5", false);
-            conclusion = "Reinício agendado.";
+            conclusion = "Reinício agendado. Vê se volta com um KI mais alto, seu verme.";
         }
         else if (lowerCommand.contains("diagnostico")) {
             actionResult = maintenanceService.runDiagnostics();
-            conclusion = "Diagnóstico completo finalizado.";
+            conclusion = "Diagnóstico finalizado. Analisar esse lixo foi um tédiooo...";
         }
         // =====================================================================
         // NÍVEL 8: SENTINELA SOB DEMANDA (Leitura de Arquivos)
@@ -156,7 +159,7 @@ public class GhostController {
             
             // Aviso prévio antes de entrar no loop demorado
             try {
-                ttsService.synthesize("Iniciando modo autônomo. Assumindo controle para processar a tarefa, Senhor.");
+                ttsService.synthesize("Iniciando modo autônomo, Capitãooo. Assumindo o controle, afinal, vermes como você precisam da ajuda da elite.");
             } catch (Exception e) {
                 log.warn("Falha no TTS de aviso do Modo Agente.");
             }
@@ -196,7 +199,7 @@ public class GhostController {
                             String skillContent = actionNode.get("content").asText();
                             Path skillPath = skillsDir.resolve(skillName);
                             Files.writeString(skillPath, skillContent, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
-                            osAction = "Skill [" + skillName + "] forjada e salva no Córtex com sucesso.";
+                            osAction = "Skill [" + skillName + "] forjada. Uma técnica digna de um Príncipe Imortal, Capitãooo.";
                             break;
 
                         case "EXECUTE_SKILL":
@@ -205,7 +208,7 @@ public class GhostController {
                             Path targetSkill = skillsDir.resolve(runName);
                             
                             if (!Files.exists(targetSkill)) {
-                                aiResponse += " Erro: A skill solicitada não foi encontrada no meu banco de dados.";
+                                aiResponse += " Que tédiooo... A skill solicitada não existe. Tente criar algo útil primeiro, classe baixa.";
                                 break;
                             }
                             
@@ -297,7 +300,7 @@ public class GhostController {
                     }
                 } catch (Exception e) {
                     log.error("GHOST >> Falha na automação UI/OS: {}", e.getMessage());
-                    aiResponse += " Senhor, encontrei uma falha crítica ao tentar manipular o sistema físico.";
+                    aiResponse += " Capitãooo, essa máquina de classe baixa falhou ao tentar manipular o sistema físico. Que tédiooo...";
                 }
                 
                 return new CommandResult(confirmation + " " + aiResponse, osAction);

@@ -1,6 +1,12 @@
 :: --- 3. EXECUÇÃO ORQUESTRADA (PROTOCOLO DE FORÇA BRUTA) ---
 echo.
-echo [3/3] Despachando binários...
+echo [3/3] Despachando binários e subindo Córtex Vocal...
+
+:: Ghost-Voice (DOCKER)
+echo [LAUNCH] Ghost-Voice (Vegeta Mode)...
+:: O comando 'up -d' garante que ele suba em segundo plano
+docker-compose up -d ghost-voice
+timeout /t 5
 
 :: Discovery
 echo [LAUNCH] Discovery...
@@ -18,8 +24,8 @@ start "GHOST_GATEWAY" cmd /c "java -jar ghost-gateway\target\ghost-gateway-0.0.1
 
 echo.
 echo ============================================================
-echo [STATUS] Comandos enviados. Se as janelas fecharam, verifique:
-echo 1. Se o nome do arquivo JAR é exatamente o citado acima.
-echo 2. Se o Java está no PATH (digite 'java -version' no terminal).
+echo [STATUS] Comandos enviados. Protocolo Vegeta Ativo.
+echo 1. Ghost-Voice rodando no Docker (Porta 5000).
+echo 2. Se a voz não sair, verifique 'docker logs ghost-voice'.
 echo ============================================================
 pause
